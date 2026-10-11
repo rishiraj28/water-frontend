@@ -5,7 +5,6 @@ import Admin from "./pages/Admin"
 import Complaint from "./pages/Complaint"
 import Home from "./pages/Home"
 import Login from "./pages/Login"
-import Register from "./pages/Register"
 import StayAware from "./pages/StayAware"
 import { AdminAuthProvider, useAdminAuth } from "./AdminAuthContext"
 
@@ -26,7 +25,7 @@ function App() {
           <Route path="/Login" element={<Login />} />
           <Route path="/Admin" element={<ProtectedAdmin />} />
           <Route path="/about" element={<About />} />
-          <Route path="/Register" element={<Register />} />
+          <Route path="/Register" element={<Navigate to="/complaint" replace />} />
         </Routes>
       </div>
     </AdminAuthProvider>
