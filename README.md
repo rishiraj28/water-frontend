@@ -44,7 +44,7 @@ We applied systems thinking to analyze the intricate interactions involved in wa
   - **Spring Boot** is used for creating the backend services. It simplifies the development of production-ready applications with its embedded server and wide range of libraries.
 
 - **Database:** 
-  - **MySQL** is utilized for managing and storing data. It is a reliable relational database management system that ensures data integrity and supports complex queries.
+  - **MongoDB** stores complaint and user documents; MongoDB Atlas is used for the hosted deployment.
 
 ### Programming Languages
 
@@ -54,8 +54,8 @@ We applied systems thinking to analyze the intricate interactions involved in wa
 - **Java:** 
   - Employed for developing the backend services using Spring Boot.
 
-- **SQL:** 
-  - Used for querying and managing data in MySQL.
+- **MongoDB:**
+  - Used for storing and querying application documents.
 
 ### Packages and Libraries
 
@@ -72,7 +72,7 @@ We applied systems thinking to analyze the intricate interactions involved in wa
 - **Spring Boot:** A framework for building Java-based web applications with built-in support for embedded servers and RESTful services.
 - **Spring Data JPA:** Provides APIs and implementations for data access.
 - **Spring Web:** Provides features to build web applications, including RESTful applications using Spring MVC.
-- **MySQL Connector/JDBC:** A driver that enables Java applications to communicate with MySQL databases.
+- **Spring Data MongoDB:** Provides document persistence through MongoDB repositories.
 
 ## Final Outcomes:
 ![Home Page](https://github.com/Cap26803/Water-Quality-Monitoring/assets/106472393/6e0dae06-e3c9-4064-a6dd-f67f1a902004)
@@ -108,4 +108,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 The frontend repository is configured for Vercel. Set `REACT_APP_API_URL` to the deployed backend origin ending in `/api`, for example `https://your-backend.onrender.com/api`.
 
-The backend repository includes a Render Blueprint and Dockerfile. Configure its MySQL and administrator environment variables in Render, then set `APP_CORS_ALLOWED_ORIGINS` to the exact deployed Vercel origin. See the backend README for the required variables. Keep credentials in the hosting provider's environment settings, never in Git.
+The backend repository includes a Render Blueprint and Dockerfile. Configure its MongoDB Atlas URI and administrator environment variables in Render, then set `APP_CORS_ALLOWED_ORIGINS` to the exact deployed Vercel origin. See the backend README for the required variables. Keep credentials in the hosting provider's environment settings, never in Git.
