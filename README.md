@@ -103,3 +103,9 @@ Thank you for supporting the Water Quality Monitoring platform and our mission t
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Deployment
+
+The frontend repository is configured for Vercel. Set `REACT_APP_API_URL` to the deployed backend origin ending in `/api`, for example `https://your-backend.onrender.com/api`.
+
+The backend repository includes a Render Blueprint and Dockerfile. Configure its MySQL and administrator environment variables in Render, then set `APP_CORS_ALLOWED_ORIGINS` to the exact deployed Vercel origin. See the backend README for the required variables. Keep credentials in the hosting provider's environment settings, never in Git.

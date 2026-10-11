@@ -1,5 +1,5 @@
-import axios from 'axios'; // Import Axios for making HTTP requests
 import React, { useState } from 'react';
+import { createComplaint } from '../api';
 
 const styles = {
   container: {
@@ -70,15 +70,8 @@ function Complaint() {
     }
     
     try {
-      // Log the form data to ensure it's correctly populated
-      console.log('Submitting form data:', formData);
-    
-      // Make POST request to backend
-      const response = await axios.post('http://localhost:8081/api/complaints/add', formData);
-    
-      console.log('Response:', response.data);
-    
       // Reset form after successful submission
+      await createComplaint(formData);
       setFormData({
         name: '',
         address: '',

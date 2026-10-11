@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAdminAuth } from '../AdminAuthContext';
 
 const styles = {
     container: {
@@ -48,6 +50,8 @@ function Login() {
         password: '',
     });
     const [error, setError] = useState('');
+    const navigate = useNavigate();
+    const { login } = useAdminAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -57,9 +61,17 @@ function Login() {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('Administrator sign-in is unavailable until server-side authentication is configured.');
+        setError('');
+        try {
+            await login(formData.email, formData.password);
+            navigate('/Admin');
+        } catch (requestError) {
+            setError(requestError.response?.status === 401
+                ? 'Invalid username or password'
+                : 'Unable to sign in. Please try again later.');
+        }
     };
 
     return (

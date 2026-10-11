@@ -1,5 +1,6 @@
 // Navbar.js
 import { Link, NavLink } from "react-router-dom";
+import { useAdminAuth } from "./AdminAuthContext";
 
 const styles = {
   nav: {
@@ -38,6 +39,8 @@ const styles = {
 };
 
 export default function Navbar() {
+  const { credentials, logout } = useAdminAuth();
+
   return (
     <nav style={styles.nav}>
       <Link to="/" style={styles.siteTitle}>
@@ -64,6 +67,16 @@ export default function Navbar() {
             Admin
           </NavLink>
         </li>
+        {credentials && (
+          <li style={styles.listItem}>
+            <button
+              onClick={logout}
+              style={{ background: 'none', border: 0, color: 'white', cursor: 'pointer', fontSize: 16, fontWeight: 'bold' }}
+            >
+              Sign out
+            </button>
+          </li>
+        )}
       </ul>
     </nav>
   );

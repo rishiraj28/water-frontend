@@ -1,7 +1,8 @@
-import axios from 'axios'; // Import Axios for making HTTP requests
 import { ArcElement, Chart, Legend, Tooltip } from 'chart.js';
 import React, { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2'; // Import Pie chart component
+import { useAdminAuth } from '../AdminAuthContext';
+import { getAllComplaints, updateComplaintStatus as saveComplaintStatus } from '../api';
 
 Chart.register(ArcElement, Tooltip, Legend);
 
@@ -74,49 +75,51 @@ function Admin() {
     const [complaints, setComplaints] = useState([]);
     const [acknowledgements, setAcknowledgements] = useState({});
     const [statusCounts, setStatusCounts] = useState({ accepted: 0, rejected: 0, pending: 0 });
+    const [error, setError] = useState('');
+    const { credentials } = useAdminAuth();
 
     useEffect(() => {
-        // Fetch complaints from the backend
-        const fetchComplaints = async () => {
-            try {
-                const response = await axios.get('http://localhost:8081/api/complaints/getAll');
-                setComplaints(response.data);
-                updateStatusCounts(response.data);
-            } catch (error) {
-                console.error('Error fetching complaints:', error);
-            }
-        };
+        let active = true;
+        getAllComplaints(credentials)
+            .then(({ data }) => {
+                if (active) {
+                    setComplaints(data);
+                    updateStatusCounts(data);
+                }
+            })
+            .catch(() => {
+                if (active) setError('Unable to load complaints. Please sign in again.');
+            });
 
-        fetchComplaints();
-    }, []);
+        return () => {
+            active = false;
+        };
+    }, [credentials]);
 
     const handleAccept = (id) => {
-        setAcknowledgements({
-            ...acknowledgements,
-            [id]: `Complaint with ID ${id} accepted`,
-        });
         updateComplaintStatus(id, 'accepted');
-        console.log(`Complaint with ID ${id} accepted`);
     };
 
     const handleReject = (id) => {
-        setAcknowledgements({
-            ...acknowledgements,
-            [id]: `Complaint with ID ${id} rejected`,
-        });
         updateComplaintStatus(id, 'rejected');
-        console.log(`Complaint with ID ${id} rejected`);
     };
 
-    const updateComplaintStatus = (id, status) => {
-        setComplaints((prevComplaints) =>
-            prevComplaints.map((complaint) =>
-                complaint.id === id ? { ...complaint, status } : complaint
-            )
-        );
-        updateStatusCounts(complaints.map((complaint) =>
-            complaint.id === id ? { ...complaint, status } : complaint
-        ));
+    const updateComplaintStatus = async (id, status) => {
+        setError('');
+        try {
+            const { data: updatedComplaint } = await saveComplaintStatus(id, status, credentials);
+            const updatedComplaints = complaints.map((complaint) =>
+                complaint.id === id ? updatedComplaint : complaint
+            );
+            setComplaints(updatedComplaints);
+            updateStatusCounts(updatedComplaints);
+            setAcknowledgements((previous) => ({
+                ...previous,
+                [id]: `Complaint with ID ${id} ${status}`,
+            }));
+        } catch {
+            setError('Unable to update this complaint. Please try again.');
+        }
     };
 
     const updateStatusCounts = (complaints) => {
@@ -162,6 +165,7 @@ function Admin() {
         <div style={styles.mainContainer}>
             <div style={styles.container}>
                 <h2>Complaint Dashboard</h2>
+                {error && <p role="alert" style={{ color: 'red' }}>{error}</p>}
                 {complaints.map((complaint) => (
                     <div key={complaint.id} style={styles.complaintItem}>
                         <p style={styles.complaintType}>{complaint.complaintType}</p>
