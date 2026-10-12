@@ -47,9 +47,12 @@ function Complaint() {
     complaintType: '',
     phoneNumber: '',
     emailAddress: '',
+    description: '',
   });
 
   const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSuccess = formError === 'Complaint submitted successfully!';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -62,16 +65,21 @@ function Complaint() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
-    
-    // Basic form validation
-    if (!formData.name || !formData.address || !formData.zone || !formData.complaintType) {
+
+    const normalizedForm = Object.fromEntries(
+      Object.entries(formData).map(([key, value]) => [key, value.trim()])
+    );
+    if (Object.values(normalizedForm).some((value) => !value)) {
       setFormError('Please fill out all fields.');
       return;
     }
-    
+
+    setIsSubmitting(true);
     try {
-      // Reset form after successful submission
-      await createComplaint(formData);
+      const response = await createComplaint(normalizedForm);
+      if (response.status !== 201 || !response.data?.id) {
+        throw new Error('The server did not confirm that the complaint was saved.');
+      }
       setFormData({
         name: '',
         address: '',
@@ -79,11 +87,16 @@ function Complaint() {
         complaintType: '',
         phoneNumber: '',
         emailAddress: '',
+        description: '',
       });
       setFormError('Complaint submitted successfully!');
     } catch (error) {
-      console.error('Error submitting complaint:', error.message);
-      setFormError('Error submitting complaint. Please try again.');
+      const message = error.response?.data?.detail || error.response?.data?.message;
+      setFormError(error.message.includes('API URL is not configured')
+        ? error.message
+        : message || 'Error submitting complaint. Please check your connection and try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };  
 
@@ -145,11 +158,14 @@ function Complaint() {
         <div style={styles.formGroup}>
           <label style={styles.label}>Phone Number</label>
           <input
-            type="text"
+            type="tel"
             name="phoneNumber"
             value={formData.phoneNumber}
             onChange={handleChange}
             style={styles.input}
+            minLength={7}
+            maxLength={20}
+            pattern="[0-9+()\\s-]{7,20}"
             required
           />
         </div>
@@ -164,8 +180,21 @@ function Complaint() {
             required
           />
         </div>
-        {formError && <p style={{ color: 'red' }}>{formError}</p>}
-        <button type="submit" style={styles.button}>Submit Complaint</button>
+        <div style={styles.formGroup}>
+          <label style={styles.label}>Description</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            style={{ ...styles.input, minHeight: '110px', resize: 'vertical' }}
+            maxLength={2000}
+            required
+          />
+        </div>
+        {formError && <p role={isSuccess ? 'status' : 'alert'} style={{ color: isSuccess ? 'green' : 'red' }}>{formError}</p>}
+        <button type="submit" style={{ ...styles.button, opacity: isSubmitting ? 0.7 : 1 }} disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Submit Complaint'}
+        </button>
       </form>
     </div>
   );

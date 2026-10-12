@@ -73,71 +73,67 @@ const styles = {
 
 function Admin() {
     const [complaints, setComplaints] = useState([]);
-    const [acknowledgements, setAcknowledgements] = useState({});
-    const [statusCounts, setStatusCounts] = useState({ accepted: 0, rejected: 0, pending: 0 });
+    const [statusCounts, setStatusCounts] = useState({ pending: 0, in_progress: 0, resolved: 0 });
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+    const [updatingIds, setUpdatingIds] = useState([]);
     const { credentials } = useAdminAuth();
 
     useEffect(() => {
+        const counts = { pending: 0, in_progress: 0, resolved: 0 };
+        complaints.forEach((complaint) => {
+            if (complaint.status === 'pending') counts.pending++;
+            else if (complaint.status === 'in_progress') counts.in_progress++;
+            else if (complaint.status === 'resolved') counts.resolved++;
+        });
+        setStatusCounts(counts);
+    }, [complaints]);
+
+    useEffect(() => {
         let active = true;
-        getAllComplaints(credentials)
-            .then(({ data }) => {
+        const loadComplaints = async (showLoading = false) => {
+            if (showLoading) setIsLoading(true);
+            try {
+                const { data } = await getAllComplaints(credentials);
                 if (active) {
                     setComplaints(data);
-                    updateStatusCounts(data);
+                    setError('');
                 }
-            })
-            .catch(() => {
+            } catch {
                 if (active) setError('Unable to load complaints. Please sign in again.');
-            });
+            } finally {
+                if (active && showLoading) setIsLoading(false);
+            }
+        };
+
+        loadComplaints(true);
+        const refreshInterval = window.setInterval(() => loadComplaints(), 30000);
 
         return () => {
             active = false;
+            window.clearInterval(refreshInterval);
         };
     }, [credentials]);
 
-    const handleAccept = (id) => {
-        updateComplaintStatus(id, 'accepted');
-    };
-
-    const handleReject = (id) => {
-        updateComplaintStatus(id, 'rejected');
-    };
-
     const updateComplaintStatus = async (id, status) => {
         setError('');
+        setUpdatingIds((current) => [...current, id]);
         try {
             const { data: updatedComplaint } = await saveComplaintStatus(id, status, credentials);
-            const updatedComplaints = complaints.map((complaint) =>
-                complaint.id === id ? updatedComplaint : complaint
-            );
-            setComplaints(updatedComplaints);
-            updateStatusCounts(updatedComplaints);
-            setAcknowledgements((previous) => ({
-                ...previous,
-                [id]: `Complaint with ID ${id} ${status}`,
-            }));
+            setComplaints((current) => current.map((complaint) => complaint.id === id ? updatedComplaint : complaint));
         } catch {
             setError('Unable to update this complaint. Please try again.');
+        } finally {
+            setUpdatingIds((current) => current.filter((updatingId) => updatingId !== id));
         }
     };
 
-    const updateStatusCounts = (complaints) => {
-        const counts = { accepted: 0, rejected: 0, pending: 0 };
-        complaints.forEach((complaint) => {
-            if (complaint.status === 'accepted') counts.accepted++;
-            else if (complaint.status === 'rejected') counts.rejected++;
-            else counts.pending++;
-        });
-        setStatusCounts(counts);
-    };
-
     const data = {
-        labels: ['Accepted', 'Rejected', 'Pending'],
+        labels: ['Pending', 'In Progress', 'Resolved'],
         datasets: [
             {
-                data: [statusCounts.accepted, statusCounts.rejected, statusCounts.pending],
-                backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+                data: [statusCounts.pending, statusCounts.in_progress, statusCounts.resolved],
+                backgroundColor: ['#ffc107', '#007bff', '#28a745'],
             },
         ],
     };
@@ -166,35 +162,48 @@ function Admin() {
             <div style={styles.container}>
                 <h2>Complaint Dashboard</h2>
                 {error && <p role="alert" style={{ color: 'red' }}>{error}</p>}
-                {complaints.map((complaint) => (
-                    <div key={complaint.id} style={styles.complaintItem}>
-                        <p style={styles.complaintType}>{complaint.complaintType}</p>
-                        <p>Name: {complaint.name}</p>
-                        <p>Address: {complaint.address}</p>
-                        <p>Zone: {complaint.zone}</p>
-                        <p>Phone Number: {complaint.phoneNumber}</p>
-                        <p>Email Address: {complaint.emailAddress}</p>
-                        <div style={styles.buttonContainer}>
-                            <button
-                                style={{ ...styles.button, ...styles.acceptButton }}
-                                onClick={() => handleAccept(complaint.id)}
-                            >
-                                Accept
-                            </button>
-                            <button
-                                style={{ ...styles.button, ...styles.rejectButton }}
-                                onClick={() => handleReject(complaint.id)}
-                            >
-                                Reject
-                            </button>
-                        </div>
-                        {acknowledgements[complaint.id] && (
-                            <p style={styles.acknowledgement}>
-                                {acknowledgements[complaint.id]}
-                            </p>
-                        )}
+                {isLoading ? <p role="status">Loading complaints...</p> : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                                <tr>
+                                    {['Complaint ID', 'Name', 'Location', 'Complaint Type', 'Description', 'Date', 'Status'].map((heading) => (
+                                        <th key={heading} scope="col" style={{ padding: '10px', borderBottom: '1px solid #ccc' }}>{heading}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {complaints.map((complaint) => (
+                                    <tr key={complaint.id}>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{complaint.id}</td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{complaint.name}</td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{[complaint.address, complaint.zone].filter(Boolean).join(', ')}</td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{complaint.complaintType}</td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>{complaint.description || 'Not provided'}</td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                                            {complaint.createdAt ? new Date(complaint.createdAt).toLocaleString() : 'N/A'}
+                                        </td>
+                                        <td style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+                                            <select
+                                                aria-label={`Status for complaint ${complaint.id}`}
+                                                value={complaint.status || 'pending'}
+                                                onChange={(event) => updateComplaintStatus(complaint.id, event.target.value)}
+                                                disabled={updatingIds.includes(complaint.id)}
+                                            >
+                                                <option value="pending">Pending</option>
+                                                <option value="in_progress">In Progress</option>
+                                                <option value="resolved">Resolved</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {!complaints.length && (
+                                    <tr><td colSpan="7" style={{ padding: '10px' }}>No complaints have been submitted.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                ))}
+                )}
             </div>
             <div style={styles.chartContainer}>
                 <h3>Complaints Status Overview</h3>
