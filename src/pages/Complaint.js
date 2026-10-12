@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { createComplaint } from '../api';
+import React, { useRef, useState } from 'react';
 
 const styles = {
   container: {
@@ -51,19 +50,23 @@ function Complaint() {
   });
 
   const [formError, setFormError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSuccess = formError === 'Complaint submitted successfully!';
+  const [referenceId, setReferenceId] = useState('');
+  const isProcessing = useRef(false);
+  const isSuccess = Boolean(referenceId);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setFormError('');
+    setReferenceId('');
     setFormData({
       ...formData,
       [name]: value,
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    if (isProcessing.current) return;
     setFormError('');
 
     const normalizedForm = Object.fromEntries(
@@ -74,12 +77,19 @@ function Complaint() {
       return;
     }
 
-    setIsSubmitting(true);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedForm.emailAddress)) {
+      setFormError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!/^[0-9()+ -]{7,20}$/.test(normalizedForm.phoneNumber)) {
+      setFormError('Please enter a valid phone number.');
+      return;
+    }
+
+    isProcessing.current = true;
     try {
-      const response = await createComplaint(normalizedForm);
-      if (response.status !== 201 || !response.data?.id) {
-        throw new Error('The server did not confirm that the complaint was saved.');
-      }
+      const generatedReference = `WQM-${Math.floor(100000 + Math.random() * 900000)}`;
       setFormData({
         name: '',
         address: '',
@@ -89,21 +99,17 @@ function Complaint() {
         emailAddress: '',
         description: '',
       });
-      setFormError('Complaint submitted successfully!');
-    } catch (error) {
-      const message = error.response?.data?.detail || error.response?.data?.message;
-      setFormError(error.message.includes('API URL is not configured')
-        ? error.message
-        : message || 'Error submitting complaint. Please check your connection and try again.');
+      setReferenceId(generatedReference);
+      setFormError('');
     } finally {
-      setIsSubmitting(false);
+      isProcessing.current = false;
     }
   };  
 
   return (
     <div style={styles.container}>
       <h1>Submit a Complaint</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} noValidate>
         <div style={styles.formGroup}>
           <label style={styles.label}>Full Name</label>
           <input
@@ -165,7 +171,7 @@ function Complaint() {
             style={styles.input}
             minLength={7}
             maxLength={20}
-            pattern="[0-9+()\\s-]{7,20}"
+            pattern="[0-9()+ -]{7,20}"
             required
           />
         </div>
@@ -191,10 +197,15 @@ function Complaint() {
             required
           />
         </div>
-        {formError && <p role={isSuccess ? 'status' : 'alert'} style={{ color: isSuccess ? 'green' : 'red' }}>{formError}</p>}
-        <button type="submit" style={{ ...styles.button, opacity: isSubmitting ? 0.7 : 1 }} disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit Complaint'}
-        </button>
+        {formError && <p role="alert" style={{ color: 'red' }}>{formError}</p>}
+        {isSuccess && (
+          <div role="status" style={{ color: 'green' }}>
+            <p>Complaint registered successfully!</p>
+            <p>Reference ID: {referenceId}</p>
+            <p>Frontend demo only: complaints are not saved and will not persist after refreshing.</p>
+          </div>
+        )}
+        <button type="submit" style={styles.button}>Submit Complaint</button>
       </form>
     </div>
   );
